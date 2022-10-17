@@ -31,9 +31,12 @@ unsigned long currentIRCode = 0;
 unsigned long currentIRCodeTime = 0;
 int motorPower = 0;
 
+#define ENCODER_COUNTS_PER_REV 40
+
 #define ENCODER_COUNT 4
 unsigned long encoderIntervalMicros[ENCODER_COUNT] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX };
 unsigned long encoderLastChangeTimeMicros[ENCODER_COUNT];
+uint16_t encoderSpeedRevsPerMinute[ENCODER_COUNT];
 
 uint8_t lastPinK = 0;
 
@@ -269,13 +272,18 @@ void loop() {
     }
   }
 
-  // Encoder timeout
+  // Process encoders
   for (int i = 0; i < ENCODER_COUNT; i++)
   {
-    if (encoderLastChangeTimeMicros[i] + 2 * encoderIntervalMicros[i] < micros())
+    // Encoder timeout
+    if (encoderLastChangeTimeMicros[i] + 10 * encoderIntervalMicros[i] < micros())
     {
       encoderIntervalMicros[i] = UINT32_MAX;
+      encoderSpeedRevsPerMinute[i] = 0;
+      continue;
     }
+
+    encoderSpeedRevsPerMinute[i] = (60 * 1000000 / ENCODER_COUNTS_PER_REV) / encoderIntervalMicros[i];
   }
 
   static unsigned long lastPrintMs = 0;
@@ -286,7 +294,7 @@ void loop() {
       Serial.print("Encoder ");
       Serial.print(i);
       Serial.print(": ");
-      Serial.println(encoderIntervalMicros[i]);
+      Serial.println(encoderSpeedRevsPerMinute[i]);
       lastPrintMs = millis();
     }
   }
