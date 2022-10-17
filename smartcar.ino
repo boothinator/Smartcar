@@ -1,5 +1,5 @@
 #include <IRremote.h>
-
+#include <avr/interrupt.h>
 
 #define ENABLE_LEFT 5
 #define ENABLE_RIGHT 6
@@ -31,6 +31,33 @@ unsigned long currentIRCode = 0;
 unsigned long currentIRCodeTime = 0;
 int motorPower = 0;
 
+#define ENCODER_COUNT 4
+unsigned long encoderIntervalMicros[ENCODER_COUNT] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX };
+unsigned long encoderLastChangeTimeMicros[ENCODER_COUNT];
+
+uint8_t lastPinK = 0;
+
+// Port K pin change interrupt
+// Analog pins 8-16
+ISR(PCINT2_vect)
+{
+  unsigned long timeMicros = micros();
+  uint8_t pinK = PINK;
+  uint8_t change = lastPinK ^ pinK;
+
+  for (int i = 0; i < ENCODER_COUNT; i++)
+  {
+    if (change & (1 << i))
+    {
+      // Exponential smoothing
+      encoderIntervalMicros[i] = (encoderIntervalMicros[i] / 2) + ((timeMicros - encoderLastChangeTimeMicros[i]) / 2);
+      encoderLastChangeTimeMicros[i] = timeMicros;
+    }
+  }
+
+  lastPinK = pinK;
+}
+
 void setup() {
   // put your setup code here, to run once:
 
@@ -47,6 +74,10 @@ void setup() {
 
   IrReceiver.begin(RECV_PIN, ENABLE_LED_FEEDBACK);
   Serial.begin(9600);  // debug output at 9600 baud
+
+  // Pin change interrupt
+  PCICR |= 1 << PCIE2;
+  PCMSK2 = 0b00001111;
 }
 
 void setPower() {
@@ -237,4 +268,27 @@ void loop() {
       setPower();
     }
   }
+
+  // Encoder timeout
+  for (int i = 0; i < ENCODER_COUNT; i++)
+  {
+    if (encoderLastChangeTimeMicros[i] + 2 * encoderIntervalMicros[i] < micros())
+    {
+      encoderIntervalMicros[i] = UINT32_MAX;
+    }
+  }
+
+  static unsigned long lastPrintMs = 0;
+  if (millis() - lastPrintMs > 1000)
+  {
+    for (int i = 0; i < ENCODER_COUNT; i++)
+    {
+      Serial.print("Encoder ");
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.println(encoderIntervalMicros[i]);
+      lastPrintMs = millis();
+    }
+  }
+  
 }
