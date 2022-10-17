@@ -33,12 +33,24 @@ unsigned long currentIRCode = 0;
 unsigned long currentIRCodeTime = 0;
 int motorPower = 0;
 
+#define MOTOR_COUNT 4
+
+int enablePinArr[MOTOR_COUNT] = {ENABLE_LEFT_FRONT, ENABLE_RIGHT_FRONT, ENABLE_LEFT_REAR, ENABLE_RIGHT_REAR};
+int inputPin1Arr[MOTOR_COUNT] = {INPUT_2, INPUT_3, INPUT_R1, INPUT_R4};
+int inputPin2Arr[MOTOR_COUNT] = {INPUT_1, INPUT_4, INPUT_R2, INPUT_R3};
+
+float Kp = 1.0, Ki = 0.1, Kd = 0.01;
+
+int motorSpeedSetpointsRpm[MOTOR_COUNT] = {0, 0, 0, 0};
+
+
+
 #define ENCODER_COUNTS_PER_REV 40
 
 #define ENCODER_COUNT 4
 unsigned long encoderIntervalMicros[ENCODER_COUNT] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX };
 unsigned long encoderLastChangeTimeMicros[ENCODER_COUNT];
-uint16_t encoderSpeedRevsPerMinute[ENCODER_COUNT];
+uint16_t encoderSpeedRpm[ENCODER_COUNT];
 
 uint8_t lastPinK = 0;
 
@@ -83,6 +95,27 @@ void setup() {
   // Pin change interrupt
   PCICR |= 1 << PCIE2;
   PCMSK2 = 0b00001111;
+}
+
+void setMotorPower(int motor, int power)
+{
+  analogWrite(enablePinArr[motor], abs(power));
+  if (power > 0)
+  {
+    digitalWrite(inputPin1Arr[motor], HIGH);
+    digitalWrite(inputPin2Arr[motor], LOW);
+  }
+  else if (power < 0)
+  {
+    digitalWrite(inputPin1Arr[motor], LOW);
+    digitalWrite(inputPin2Arr[motor], HIGH);
+  }
+  else
+  {
+    // Brake
+    digitalWrite(inputPin1Arr[motor], HIGH);
+    digitalWrite(inputPin2Arr[motor], HIGH);
+  }
 }
 
 void setPower() {
@@ -315,11 +348,11 @@ void loop() {
     if (encoderLastChangeTimeMicros[i] + 10 * encoderIntervalMicros[i] < micros())
     {
       encoderIntervalMicros[i] = UINT32_MAX;
-      encoderSpeedRevsPerMinute[i] = 0;
+      encoderSpeedRpm[i] = 0;
       continue;
     }
 
-    encoderSpeedRevsPerMinute[i] = (60 * 1000000 / ENCODER_COUNTS_PER_REV) / encoderIntervalMicros[i];
+    encoderSpeedRpm[i] = (60 * 1000000 / ENCODER_COUNTS_PER_REV) / encoderIntervalMicros[i];
   }
 
   static unsigned long lastPrintMs = 0;
@@ -330,7 +363,7 @@ void loop() {
       Serial.print("Encoder ");
       Serial.print(i);
       Serial.print(": ");
-      Serial.println(encoderSpeedRevsPerMinute[i]);
+      Serial.println(encoderSpeedRpm[i]);
       lastPrintMs = millis();
     }
   }
