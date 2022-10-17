@@ -126,147 +126,52 @@ void setPower() {
 }
 
 void forward() {
-  analogWrite(ENABLE_LEFT_FRONT, motorPower);
-  digitalWrite(INPUT_1, LOW);
-  digitalWrite(INPUT_2, HIGH);
-  
-  analogWrite(ENABLE_LEFT_REAR, motorPower);
-  digitalWrite(INPUT_R1, HIGH);
-  digitalWrite(INPUT_R2, LOW);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
-  digitalWrite(INPUT_3, HIGH);
-  digitalWrite(INPUT_4, LOW);
-
-  analogWrite(ENABLE_RIGHT_REAR, motorPower);
-  digitalWrite(INPUT_R3, LOW);
-  digitalWrite(INPUT_R4, HIGH);
+  setMotorPower(0, motorPower);
+  setMotorPower(1, motorPower);
+  setMotorPower(2, motorPower);
+  setMotorPower(3, motorPower);
 }
 
 void reverse() {
-  analogWrite(ENABLE_LEFT_FRONT, motorPower);
-  digitalWrite(INPUT_1, HIGH);
-  digitalWrite(INPUT_2, LOW);
-
-  analogWrite(ENABLE_LEFT_REAR, motorPower);
-  digitalWrite(INPUT_R1, LOW);
-  digitalWrite(INPUT_R2, HIGH);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
-  digitalWrite(INPUT_3, LOW);
-  digitalWrite(INPUT_4, HIGH);
-
-  analogWrite(ENABLE_RIGHT_REAR, motorPower);
-  digitalWrite(INPUT_R3, HIGH);
-  digitalWrite(INPUT_R4, LOW);
+  setMotorPower(0, -motorPower);
+  setMotorPower(1, -motorPower);
+  setMotorPower(2, -motorPower);
+  setMotorPower(3, -motorPower);
 }
 
 void brake() {
-  analogWrite(ENABLE_LEFT_FRONT, 0);
-  digitalWrite(INPUT_1, HIGH);
-  digitalWrite(INPUT_2, HIGH);
-  
-  analogWrite(ENABLE_LEFT_REAR, 0);
-  digitalWrite(INPUT_R1, HIGH);
-  digitalWrite(INPUT_R2, HIGH);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, 0);
-  digitalWrite(INPUT_3, HIGH);
-  digitalWrite(INPUT_4, HIGH);
-  
-  analogWrite(ENABLE_RIGHT_REAR, 0);
-  digitalWrite(INPUT_R3, HIGH);
-  digitalWrite(INPUT_R4, HIGH);
-}
-
-void coast() {
-  analogWrite(ENABLE_LEFT_FRONT, 0);
-  digitalWrite(INPUT_1, LOW);
-  digitalWrite(INPUT_2, LOW);
-
-  analogWrite(ENABLE_LEFT_REAR, 0);
-  digitalWrite(INPUT_R1, LOW);
-  digitalWrite(INPUT_R2, LOW);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, 0);
-  digitalWrite(INPUT_3, LOW);
-  digitalWrite(INPUT_4, LOW);
-  
-  analogWrite(ENABLE_RIGHT_REAR, 0);
-  digitalWrite(INPUT_R3, LOW);
-  digitalWrite(INPUT_R4, LOW);
+  setMotorPower(0, 0);
+  setMotorPower(1, 0);
+  setMotorPower(2, 0);
+  setMotorPower(3, 0);
 }
 
 void right() {
-  analogWrite(ENABLE_LEFT_FRONT, motorPower);
-  digitalWrite(INPUT_1, HIGH);
-  digitalWrite(INPUT_2, LOW);
-
-  analogWrite(ENABLE_LEFT_REAR, motorPower);
-  digitalWrite(INPUT_R1, LOW);
-  digitalWrite(INPUT_R2, HIGH);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
-  digitalWrite(INPUT_3, HIGH);
-  digitalWrite(INPUT_4, LOW);
-  
-  analogWrite(ENABLE_RIGHT_REAR, motorPower);
-  digitalWrite(INPUT_R3, LOW);
-  digitalWrite(INPUT_R4, HIGH);
+  setMotorPower(0, -motorPower);
+  setMotorPower(1, motorPower);
+  setMotorPower(2, -motorPower);
+  setMotorPower(3, motorPower);
 }
 
 void left() {
-  analogWrite(ENABLE_LEFT_FRONT, motorPower);
-  digitalWrite(INPUT_1, LOW);
-  digitalWrite(INPUT_2, HIGH);
-
-  analogWrite(ENABLE_LEFT_REAR, motorPower);
-  digitalWrite(INPUT_R1, HIGH);
-  digitalWrite(INPUT_R2, LOW);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
-  digitalWrite(INPUT_3, LOW);
-  digitalWrite(INPUT_4, HIGH);
-
-  analogWrite(ENABLE_RIGHT_REAR, motorPower);
-  digitalWrite(INPUT_R3, HIGH);
-  digitalWrite(INPUT_R4, LOW);
+  setMotorPower(0, motorPower);
+  setMotorPower(1, -motorPower);
+  setMotorPower(2, motorPower);
+  setMotorPower(3, -motorPower);
 }
 
 void strafeLeft() {
-  analogWrite(ENABLE_LEFT_FRONT, motorPower);
-  digitalWrite(INPUT_1, LOW);
-  digitalWrite(INPUT_2, HIGH);
-
-  analogWrite(ENABLE_LEFT_REAR, motorPower);
-  digitalWrite(INPUT_R1, LOW);
-  digitalWrite(INPUT_R2, HIGH);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
-  digitalWrite(INPUT_3, LOW);
-  digitalWrite(INPUT_4, HIGH);
-  
-  analogWrite(ENABLE_RIGHT_REAR, motorPower);
-  digitalWrite(INPUT_R3, LOW);
-  digitalWrite(INPUT_R4, HIGH);
+  setMotorPower(0, motorPower);
+  setMotorPower(1, -motorPower);
+  setMotorPower(2, -motorPower);
+  setMotorPower(3, motorPower);
 }
 
 void strafeRight() {
-  analogWrite(ENABLE_LEFT_FRONT, motorPower);
-  digitalWrite(INPUT_1, HIGH);
-  digitalWrite(INPUT_2, LOW);
-  
-  analogWrite(ENABLE_LEFT_REAR, motorPower);
-  digitalWrite(INPUT_R1, HIGH);
-  digitalWrite(INPUT_R2, LOW);
-  
-  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
-  digitalWrite(INPUT_3, HIGH);
-  digitalWrite(INPUT_4, LOW);
-  
-  analogWrite(ENABLE_RIGHT_REAR, motorPower);
-  digitalWrite(INPUT_R3, HIGH);
-  digitalWrite(INPUT_R4, LOW);
+  setMotorPower(0, -motorPower);
+  setMotorPower(1, motorPower);
+  setMotorPower(2, motorPower);
+  setMotorPower(3, -motorPower);
 }
 
 void loop() {
@@ -322,7 +227,7 @@ void loop() {
       currentIRCodeTime = 0;
       motorPower = 0;
       commandTime = 0;
-      coast();
+      setPower();
     }
     
     // Power ramp up
