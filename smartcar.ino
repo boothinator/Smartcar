@@ -1,8 +1,10 @@
 #include <IRremote.h>
 #include <avr/interrupt.h>
 
-#define ENABLE_LEFT 5
-#define ENABLE_RIGHT 6
+#define ENABLE_LEFT_FRONT 5
+#define ENABLE_RIGHT_FRONT 6
+#define ENABLE_LEFT_REAR 4
+#define ENABLE_RIGHT_REAR 2
 #define INPUT_1 7
 #define INPUT_2 8
 #define INPUT_3 9
@@ -64,8 +66,8 @@ ISR(PCINT2_vect)
 void setup() {
   // put your setup code here, to run once:
 
-  pinMode(ENABLE_LEFT, OUTPUT);
-  pinMode(ENABLE_RIGHT, OUTPUT);
+  pinMode(ENABLE_LEFT_FRONT, OUTPUT);
+  pinMode(ENABLE_RIGHT_FRONT, OUTPUT);
   pinMode(INPUT_1, OUTPUT);
   pinMode(INPUT_2, OUTPUT);
   pinMode(INPUT_3, OUTPUT);
@@ -84,118 +86,152 @@ void setup() {
 }
 
 void setPower() {
-  analogWrite(ENABLE_LEFT, motorPower);
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
 }
 
 void forward() {
-  analogWrite(ENABLE_LEFT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
   digitalWrite(INPUT_1, LOW);
   digitalWrite(INPUT_2, HIGH);
+  
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
   digitalWrite(INPUT_R1, HIGH);
   digitalWrite(INPUT_R2, LOW);
   
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
   digitalWrite(INPUT_3, HIGH);
   digitalWrite(INPUT_4, LOW);
+
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
   digitalWrite(INPUT_R3, LOW);
   digitalWrite(INPUT_R4, HIGH);
 }
 
 void reverse() {
-  analogWrite(ENABLE_LEFT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
   digitalWrite(INPUT_1, HIGH);
   digitalWrite(INPUT_2, LOW);
+
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
   digitalWrite(INPUT_R1, LOW);
   digitalWrite(INPUT_R2, HIGH);
   
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
   digitalWrite(INPUT_3, LOW);
   digitalWrite(INPUT_4, HIGH);
+
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
   digitalWrite(INPUT_R3, HIGH);
   digitalWrite(INPUT_R4, LOW);
 }
 
 void brake() {
-  analogWrite(ENABLE_LEFT, 0);
+  analogWrite(ENABLE_LEFT_FRONT, 0);
   digitalWrite(INPUT_1, HIGH);
   digitalWrite(INPUT_2, HIGH);
+  
+  analogWrite(ENABLE_LEFT_REAR, 0);
   digitalWrite(INPUT_R1, HIGH);
   digitalWrite(INPUT_R2, HIGH);
   
-  analogWrite(ENABLE_RIGHT, 0);
+  analogWrite(ENABLE_RIGHT_FRONT, 0);
   digitalWrite(INPUT_3, HIGH);
   digitalWrite(INPUT_4, HIGH);
+  
+  analogWrite(ENABLE_RIGHT_REAR, 0);
   digitalWrite(INPUT_R3, HIGH);
   digitalWrite(INPUT_R4, HIGH);
 }
 
 void coast() {
-  analogWrite(ENABLE_LEFT, 0);
+  analogWrite(ENABLE_LEFT_FRONT, 0);
   digitalWrite(INPUT_1, LOW);
   digitalWrite(INPUT_2, LOW);
+
+  analogWrite(ENABLE_LEFT_REAR, 0);
   digitalWrite(INPUT_R1, LOW);
   digitalWrite(INPUT_R2, LOW);
   
-  analogWrite(ENABLE_RIGHT, 0);
+  analogWrite(ENABLE_RIGHT_FRONT, 0);
   digitalWrite(INPUT_3, LOW);
   digitalWrite(INPUT_4, LOW);
+  
+  analogWrite(ENABLE_RIGHT_REAR, 0);
   digitalWrite(INPUT_R3, LOW);
   digitalWrite(INPUT_R4, LOW);
 }
 
 void right() {
-  analogWrite(ENABLE_LEFT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
   digitalWrite(INPUT_1, HIGH);
   digitalWrite(INPUT_2, LOW);
+
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
   digitalWrite(INPUT_R1, LOW);
   digitalWrite(INPUT_R2, HIGH);
   
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
   digitalWrite(INPUT_3, HIGH);
   digitalWrite(INPUT_4, LOW);
+  
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
   digitalWrite(INPUT_R3, LOW);
   digitalWrite(INPUT_R4, HIGH);
 }
 
 void left() {
-  analogWrite(ENABLE_LEFT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
   digitalWrite(INPUT_1, LOW);
   digitalWrite(INPUT_2, HIGH);
+
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
   digitalWrite(INPUT_R1, HIGH);
   digitalWrite(INPUT_R2, LOW);
   
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
   digitalWrite(INPUT_3, LOW);
   digitalWrite(INPUT_4, HIGH);
+
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
   digitalWrite(INPUT_R3, HIGH);
   digitalWrite(INPUT_R4, LOW);
 }
 
 void strafeLeft() {
-  analogWrite(ENABLE_LEFT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
   digitalWrite(INPUT_1, LOW);
   digitalWrite(INPUT_2, HIGH);
+
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
   digitalWrite(INPUT_R1, LOW);
   digitalWrite(INPUT_R2, HIGH);
   
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
   digitalWrite(INPUT_3, LOW);
   digitalWrite(INPUT_4, HIGH);
+  
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
   digitalWrite(INPUT_R3, LOW);
   digitalWrite(INPUT_R4, HIGH);
 }
 
 void strafeRight() {
-  analogWrite(ENABLE_LEFT, motorPower);
+  analogWrite(ENABLE_LEFT_FRONT, motorPower);
   digitalWrite(INPUT_1, HIGH);
   digitalWrite(INPUT_2, LOW);
+  
+  analogWrite(ENABLE_LEFT_REAR, motorPower);
   digitalWrite(INPUT_R1, HIGH);
   digitalWrite(INPUT_R2, LOW);
   
-  analogWrite(ENABLE_RIGHT, motorPower);
+  analogWrite(ENABLE_RIGHT_FRONT, motorPower);
   digitalWrite(INPUT_3, HIGH);
   digitalWrite(INPUT_4, LOW);
+  
+  analogWrite(ENABLE_RIGHT_REAR, motorPower);
   digitalWrite(INPUT_R3, HIGH);
   digitalWrite(INPUT_R4, LOW);
 }
