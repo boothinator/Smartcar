@@ -33,24 +33,39 @@ unsigned long currentIRCode = 0;
 unsigned long currentIRCodeTime = 0;
 int motorPower = 0;
 
+// Motors
+
 #define MOTOR_COUNT 4
 
 int enablePinArr[MOTOR_COUNT] = {ENABLE_LEFT_FRONT, ENABLE_RIGHT_FRONT, ENABLE_LEFT_REAR, ENABLE_RIGHT_REAR};
 int inputPin1Arr[MOTOR_COUNT] = {INPUT_2, INPUT_3, INPUT_R1, INPUT_R4};
 int inputPin2Arr[MOTOR_COUNT] = {INPUT_1, INPUT_4, INPUT_R2, INPUT_R3};
 
+int motorPowerArr[MOTOR_COUNT] = {0, 0, 0, 0};
+
+// PID
+
 float Kp = 1.0, Ki = 0.1, Kd = 0.01;
+
+#define PID_INTERVAL_MICROS 20000
 
 int motorSpeedSetpointsRpm[MOTOR_COUNT] = {0, 0, 0, 0};
 
+float errorArr[MOTOR_COUNT][3] = {
+  {0, 0, 0},
+  {0, 0, 0},
+  {0, 0, 0},
+  {0, 0, 0}
+};
 
+// Encoders
 
 #define ENCODER_COUNTS_PER_REV 40
 
 #define ENCODER_COUNT 4
 unsigned long encoderIntervalMicros[ENCODER_COUNT] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX };
 unsigned long encoderLastChangeTimeMicros[ENCODER_COUNT];
-uint16_t encoderSpeedRpm[ENCODER_COUNT];
+int encoderSpeedRpm[ENCODER_COUNT];
 
 uint8_t lastPinK = 0;
 
@@ -99,6 +114,7 @@ void setup() {
 
 void setMotorPower(int motor, int power)
 {
+  motorPowerArr[motor] = power;
   analogWrite(enablePinArr[motor], abs(power));
   if (power > 0)
   {
@@ -118,6 +134,26 @@ void setMotorPower(int motor, int power)
   }
 }
 
+int getMotorDirection(int motor)
+{
+  // TODO: make this more accurate when changing direction
+
+  int pin1 = digitalRead(inputPin1Arr[motor]);
+  int pin2 = digitalRead(inputPin2Arr[motor]);
+  if (pin1 == pin2)
+  {
+    return 0;
+  }
+  else if (pin1 == HIGH && pin2 == LOW)
+  {
+    return 1;
+  }
+  else
+  {
+    return -1;
+  }
+}
+
 void setPower() {
   analogWrite(ENABLE_LEFT_FRONT, motorPower);
   analogWrite(ENABLE_RIGHT_FRONT, motorPower);
@@ -125,53 +161,63 @@ void setPower() {
   analogWrite(ENABLE_RIGHT_REAR, motorPower);
 }
 
+void setMotorSpeed(int motor, int rpm)
+{
+  for (int i = 0; i < 3; i++)
+  {
+    errorArr[motor][i] = 0;
+  }
+
+  motorSpeedSetpointsRpm[motor] = rpm;
+}
+
 void forward() {
-  setMotorPower(0, motorPower);
-  setMotorPower(1, motorPower);
-  setMotorPower(2, motorPower);
-  setMotorPower(3, motorPower);
+  setMotorSpeed(0, motorPower);
+  setMotorSpeed(1, motorPower);
+  setMotorSpeed(2, motorPower);
+  setMotorSpeed(3, motorPower);
 }
 
 void reverse() {
-  setMotorPower(0, -motorPower);
-  setMotorPower(1, -motorPower);
-  setMotorPower(2, -motorPower);
-  setMotorPower(3, -motorPower);
+  setMotorSpeed(0, -motorPower);
+  setMotorSpeed(1, -motorPower);
+  setMotorSpeed(2, -motorPower);
+  setMotorSpeed(3, -motorPower);
 }
 
 void brake() {
-  setMotorPower(0, 0);
-  setMotorPower(1, 0);
-  setMotorPower(2, 0);
-  setMotorPower(3, 0);
+  setMotorSpeed(0, 0);
+  setMotorSpeed(1, 0);
+  setMotorSpeed(2, 0);
+  setMotorSpeed(3, 0);
 }
 
 void right() {
-  setMotorPower(0, -motorPower);
-  setMotorPower(1, motorPower);
-  setMotorPower(2, -motorPower);
-  setMotorPower(3, motorPower);
+  setMotorSpeed(0, -motorPower);
+  setMotorSpeed(1, motorPower);
+  setMotorSpeed(2, -motorPower);
+  setMotorSpeed(3, motorPower);
 }
 
 void left() {
-  setMotorPower(0, motorPower);
-  setMotorPower(1, -motorPower);
-  setMotorPower(2, motorPower);
-  setMotorPower(3, -motorPower);
+  setMotorSpeed(0, motorPower);
+  setMotorSpeed(1, -motorPower);
+  setMotorSpeed(2, motorPower);
+  setMotorSpeed(3, -motorPower);
 }
 
 void strafeLeft() {
-  setMotorPower(0, motorPower);
-  setMotorPower(1, -motorPower);
-  setMotorPower(2, -motorPower);
-  setMotorPower(3, motorPower);
+  setMotorSpeed(0, motorPower);
+  setMotorSpeed(1, -motorPower);
+  setMotorSpeed(2, -motorPower);
+  setMotorSpeed(3, motorPower);
 }
 
 void strafeRight() {
-  setMotorPower(0, -motorPower);
-  setMotorPower(1, motorPower);
-  setMotorPower(2, motorPower);
-  setMotorPower(3, -motorPower);
+  setMotorSpeed(0, -motorPower);
+  setMotorSpeed(1, motorPower);
+  setMotorSpeed(2, motorPower);
+  setMotorSpeed(3, -motorPower);
 }
 
 void loop() {
@@ -231,7 +277,7 @@ void loop() {
     }
     
     // Power ramp up
-    if (commandTime > 800 && motorPower < 250) {
+    /*if (commandTime > 800 && motorPower < 250) {
       Serial.println("Increasing power to 250");
       motorPower = 250;
       setPower();
@@ -243,7 +289,7 @@ void loop() {
       Serial.println("Increasing power to 150");
       motorPower = 150;
       setPower();
-    }
+    }*/
   }
 
   // Process encoders
@@ -257,20 +303,59 @@ void loop() {
       continue;
     }
 
-    encoderSpeedRpm[i] = (60 * 1000000 / ENCODER_COUNTS_PER_REV) / encoderIntervalMicros[i];
+    encoderSpeedRpm[i] = getMotorDirection(i) * (60 * 1000000 / ENCODER_COUNTS_PER_REV) / encoderIntervalMicros[i];
+  }
+
+  // PID control
+  static unsigned long lastPidUpdateMicros = 0;
+  float dt = micros() - lastPidUpdateMicros;
+
+  // Try to keep a consistent interval
+  if (dt >= PID_INTERVAL_MICROS)
+  {
+    float A0 = Kp + Ki*dt + Kd/dt;
+    float A1 = -Kp - 2*Kd/dt;
+    float A2 = Kd/dt;
+
+    for (int i = 0; i < MOTOR_COUNT; i++)
+    {
+      errorArr[i][2] = errorArr[i][1];
+      errorArr[i][1] = errorArr[i][0];
+      errorArr[i][0] = motorSpeedSetpointsRpm[i] - encoderSpeedRpm[i];
+
+      setMotorPower(i, motorPowerArr[i]
+        + A0 * errorArr[i][0]
+        + A1 * errorArr[i][1]
+        + A2 * errorArr[i][2]);
+    }
   }
 
   static unsigned long lastPrintMs = 0;
   if (millis() - lastPrintMs > 1000)
   {
+    Serial.print("Encoder  ");
     for (int i = 0; i < ENCODER_COUNT; i++)
     {
-      Serial.print("Encoder ");
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(encoderSpeedRpm[i]);
-      lastPrintMs = millis();
+      Serial.print(encoderSpeedRpm[i]);
+      Serial.print(" ");
     }
+    Serial.println();
+    Serial.print("Setpoint ");
+    for (int i = 0; i < ENCODER_COUNT; i++)
+    {
+      Serial.print(motorSpeedSetpointsRpm[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+    Serial.print("Power    ");
+    for (int i = 0; i < ENCODER_COUNT; i++)
+    {
+      Serial.print(motorPowerArr[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    lastPrintMs = millis();
   }
   
 }
