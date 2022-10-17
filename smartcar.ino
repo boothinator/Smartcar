@@ -172,52 +172,52 @@ void setMotorSpeed(int motor, int rpm)
 }
 
 void forward() {
-  setMotorSpeed(0, motorPower);
-  setMotorSpeed(1, motorPower);
-  setMotorSpeed(2, motorPower);
-  setMotorSpeed(3, motorPower);
+  setMotorPower(0, motorPower);
+  setMotorPower(1, motorPower);
+  setMotorPower(2, motorPower);
+  setMotorPower(3, motorPower);
 }
 
 void reverse() {
-  setMotorSpeed(0, -motorPower);
-  setMotorSpeed(1, -motorPower);
-  setMotorSpeed(2, -motorPower);
-  setMotorSpeed(3, -motorPower);
+  setMotorPower(0, -motorPower);
+  setMotorPower(1, -motorPower);
+  setMotorPower(2, -motorPower);
+  setMotorPower(3, -motorPower);
 }
 
 void brake() {
-  setMotorSpeed(0, 0);
-  setMotorSpeed(1, 0);
-  setMotorSpeed(2, 0);
-  setMotorSpeed(3, 0);
+  setMotorPower(0, 0);
+  setMotorPower(1, 0);
+  setMotorPower(2, 0);
+  setMotorPower(3, 0);
 }
 
 void right() {
-  setMotorSpeed(0, -motorPower);
-  setMotorSpeed(1, motorPower);
-  setMotorSpeed(2, -motorPower);
-  setMotorSpeed(3, motorPower);
+  setMotorPower(0, -motorPower);
+  setMotorPower(1, motorPower);
+  setMotorPower(2, -motorPower);
+  setMotorPower(3, motorPower);
 }
 
 void left() {
-  setMotorSpeed(0, motorPower);
-  setMotorSpeed(1, -motorPower);
-  setMotorSpeed(2, motorPower);
-  setMotorSpeed(3, -motorPower);
+  setMotorPower(0, motorPower);
+  setMotorPower(1, -motorPower);
+  setMotorPower(2, motorPower);
+  setMotorPower(3, -motorPower);
 }
 
 void strafeLeft() {
-  setMotorSpeed(0, motorPower);
-  setMotorSpeed(1, -motorPower);
-  setMotorSpeed(2, -motorPower);
-  setMotorSpeed(3, motorPower);
+  setMotorPower(0, motorPower);
+  setMotorPower(1, -motorPower);
+  setMotorPower(2, -motorPower);
+  setMotorPower(3, motorPower);
 }
 
 void strafeRight() {
-  setMotorSpeed(0, -motorPower);
-  setMotorSpeed(1, motorPower);
-  setMotorSpeed(2, motorPower);
-  setMotorSpeed(3, -motorPower);
+  setMotorPower(0, -motorPower);
+  setMotorPower(1, motorPower);
+  setMotorPower(2, motorPower);
+  setMotorPower(3, -motorPower);
 }
 
 void loop() {
@@ -277,7 +277,7 @@ void loop() {
     }
     
     // Power ramp up
-    /*if (commandTime > 800 && motorPower < 250) {
+    if (commandTime > 800 && motorPower < 250) {
       Serial.println("Increasing power to 250");
       motorPower = 250;
       setPower();
@@ -289,7 +289,7 @@ void loop() {
       Serial.println("Increasing power to 150");
       motorPower = 150;
       setPower();
-    }*/
+    }
   }
 
   // Process encoders
@@ -323,10 +323,10 @@ void loop() {
       errorArr[i][1] = errorArr[i][0];
       errorArr[i][0] = motorSpeedSetpointsRpm[i] - encoderSpeedRpm[i];
 
-      setMotorPower(i, motorPowerArr[i]
+      /*setMotorPower(i, motorPowerArr[i]
         + A0 * errorArr[i][0]
         + A1 * errorArr[i][1]
-        + A2 * errorArr[i][2]);
+        + A2 * errorArr[i][2]);*/
     }
   }
 
