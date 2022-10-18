@@ -26,6 +26,7 @@
 #define POUND_CODE 3041591040
 #define ONE_CODE 3910598400 
 #define THREE_CODE 4061003520 
+#define SEVEN_CODE 4144561920
 
 unsigned long lastIRCode = 0;
 unsigned long lastIRCodeTime = 0;
@@ -45,10 +46,11 @@ int motorPowerArr[MOTOR_COUNT] = {0, 0, 0, 0};
 
 // PID
 
-#define Kp 0.5
-#define Ki 0.1
+#define Kp 1.0
+#define Ki 0.01
 #define Kd 0.0
 #define FF 0.4
+#define FF_NOPID 0.9
 
 #define PID_INTERVAL_MILLIS 10
 #define MAX_POWER 255
@@ -62,6 +64,8 @@ float errorArr[MOTOR_COUNT][ERROR_HISTORY_COUNT] = {
   {0, 0, 0},
   {0, 0, 0}
 };
+
+bool pidEnable = true;
 
 // Encoders
 
@@ -176,7 +180,14 @@ void setMotorSpeed(int motor, int rpm)
   {
     errorArr[motor][i] = 0;
   }
-  setMotorPower(motor, FF * rpm);
+  if (pidEnable)
+  {
+    setMotorPower(motor, FF * rpm);
+  }
+  else
+  {
+    setMotorPower(motor, FF_NOPID * rpm);
+  }
   motorSpeedSetpointsRpm[motor] = rpm;
 }
 
@@ -310,6 +321,9 @@ void loop() {
     } else if (lastIRCode == OK_CODE) {
       motorPower = 0;
       brake();
+    } else if (lastIRCode == SEVEN_CODE)
+    {
+      pidEnable = !pidEnable;
     }
 
 
@@ -423,7 +437,10 @@ void loop() {
         newMotorPower = MAX_POWER;
       }
 
-      setMotorPower(i, newMotorPower);
+      if (pidEnable)
+      {
+        setMotorPower(i, newMotorPower);
+      }
     }
 
     /*printErrors();
