@@ -1,18 +1,18 @@
 #include <IRremote.h>
 #include <avr/interrupt.h>
 
-#define ENABLE_LEFT_FRONT 5
-#define ENABLE_RIGHT_FRONT 6
-#define ENABLE_LEFT_REAR 4
-#define ENABLE_RIGHT_REAR 2
-#define INPUT_1 7
-#define INPUT_2 8
-#define INPUT_3 9
-#define INPUT_4 11
-#define INPUT_R1 22
-#define INPUT_R2 24
-#define INPUT_R3 26
-#define INPUT_R4 28
+#define ENABLE_LEFT_FRONT 6
+#define ENABLE_RIGHT_FRONT 5
+#define ENABLE_LEFT_REAR 2
+#define ENABLE_RIGHT_REAR 4
+#define INPUT_1 11
+#define INPUT_2 9
+#define INPUT_3 8
+#define INPUT_4 7
+#define INPUT_R1 28
+#define INPUT_R2 26
+#define INPUT_R3 24
+#define INPUT_R4 22
 
 #define RECV_PIN 12
 
@@ -45,13 +45,18 @@ int motorPowerArr[MOTOR_COUNT] = {0, 0, 0, 0};
 
 // PID
 
-float Kp = 0.1, Ki = 0.1, Kd = 0.0;
+#define Kp 0.1
+#define Ki 0.01
+#define Kd 0.0
+#define FF 0.8
 
 #define PID_INTERVAL_MILLIS 1000
+#define MAX_POWER 255
 
 int motorSpeedSetpointsRpm[MOTOR_COUNT] = {0, 0, 0, 0};
 
-float errorArr[MOTOR_COUNT][3] = {
+#define ERROR_HISTORY_COUNT 3
+float errorArr[MOTOR_COUNT][ERROR_HISTORY_COUNT] = {
   {0, 0, 0},
   {0, 0, 0},
   {0, 0, 0},
@@ -68,6 +73,8 @@ unsigned long encoderLastChangeTimeMicros[ENCODER_COUNT];
 int encoderSpeedRpm[ENCODER_COUNT];
 
 uint8_t lastPinK = 0;
+
+volatile bool encodersUpdated = false;
 
 // Port K pin change interrupt
 // Analog pins 8-16
@@ -88,6 +95,8 @@ ISR(PCINT2_vect)
   }
 
   lastPinK = pinK;
+
+  encodersUpdated = true;
 }
 
 void setup() {
@@ -163,8 +172,12 @@ void setPower() {
 
 void setMotorSpeed(int motor, int rpm)
 {
+  for (int i = 0; i < ERROR_HISTORY_COUNT; i++)
+  {
+    errorArr[motor][i] = 0;
+  }
+  setMotorPower(motor, FF * rpm);
   motorSpeedSetpointsRpm[motor] = rpm;
-  //setMotorPower(motor, rpm);
 }
 
 void forward() {
@@ -189,31 +202,75 @@ void brake() {
 }
 
 void right() {
-  setMotorSpeed(0, -motorPower);
-  setMotorSpeed(1, motorPower);
-  setMotorSpeed(2, -motorPower);
-  setMotorSpeed(3, motorPower);
+  setMotorSpeed(0, motorPower);
+  setMotorSpeed(1, -motorPower);
+  setMotorSpeed(2, motorPower);
+  setMotorSpeed(3, -motorPower);
 }
 
 void left() {
-  setMotorSpeed(0, motorPower);
-  setMotorSpeed(1, -motorPower);
+  setMotorSpeed(0, -motorPower);
+  setMotorSpeed(1, motorPower);
+  setMotorSpeed(2, -motorPower);
+  setMotorSpeed(3, motorPower);
+}
+
+void strafeLeft() {
+  setMotorSpeed(0, -motorPower);
+  setMotorSpeed(1, motorPower);
   setMotorSpeed(2, motorPower);
   setMotorSpeed(3, -motorPower);
 }
 
-void strafeLeft() {
+void strafeRight() {
   setMotorSpeed(0, motorPower);
   setMotorSpeed(1, -motorPower);
   setMotorSpeed(2, -motorPower);
   setMotorSpeed(3, motorPower);
 }
 
-void strafeRight() {
-  setMotorSpeed(0, -motorPower);
-  setMotorSpeed(1, motorPower);
-  setMotorSpeed(2, motorPower);
-  setMotorSpeed(3, -motorPower);
+void printEncoders()
+{
+  Serial.print("Encoder  ");
+  for (int i = 0; i < ENCODER_COUNT; i++)
+  {
+    Serial.print(encoderSpeedRpm[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
+}
+
+void printSetpoints()
+{
+  Serial.print("Setpoint ");
+  for (int i = 0; i < ENCODER_COUNT; i++)
+  {
+    Serial.print(motorSpeedSetpointsRpm[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
+}
+
+void printErrors(int j = 0)
+{
+  Serial.print("Error    ");
+  for (int i = 0; i < ENCODER_COUNT; i++)
+  {
+    Serial.print(errorArr[i][j]);
+    Serial.print(" ");
+  }
+  Serial.println();
+}
+
+void printPower()
+{ 
+  Serial.print("Power    ");
+  for (int i = 0; i < ENCODER_COUNT; i++)
+  {
+    Serial.print(motorPowerArr[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
 }
 
 void loop() {
@@ -269,10 +326,9 @@ void loop() {
       currentIRCodeTime = 0;
       motorPower = 0;
       commandTime = 0;
-      setPower();
       for (int i = 0; i < MOTOR_COUNT; i++)
       {
-        motorSpeedSetpointsRpm[i] = 0;
+        setMotorSpeed(i, 0);
       }
     }
     
@@ -292,23 +348,35 @@ void loop() {
     }*/
   }
 
-  // Process encoders
-  for (int i = 0; i < ENCODER_COUNT; i++)
+  if (encodersUpdated)
   {
-    // Encoder timeout
-    if (encoderLastChangeTimeMicros[i] + 10 * encoderIntervalMicros[i] < micros())
+    unsigned long localEncoderIntervalMicros[ENCODER_COUNT];
+    unsigned long localEncoderLastChangeTimeMicros[ENCODER_COUNT];
+
+    for (int i = 0; i < ENCODER_COUNT; i++)
     {
-      encoderIntervalMicros[i] = UINT32_MAX;
+      localEncoderIntervalMicros[i] = encoderIntervalMicros[i];
+      localEncoderLastChangeTimeMicros[i] = encoderLastChangeTimeMicros[i];
     }
 
-    // Encoder stopped
-    if (UINT32_MAX == encoderIntervalMicros[i])
+    // Process encoders
+    for (int i = 0; i < ENCODER_COUNT; i++)
     {
-      encoderSpeedRpm[i] = 0;
-      continue;
-    }
+      // Encoder timeout
+      if (localEncoderLastChangeTimeMicros[i] + 10 * localEncoderIntervalMicros[i] < micros())
+      {
+        localEncoderIntervalMicros[i] = encoderIntervalMicros[i] = UINT32_MAX;
+      }
 
-    encoderSpeedRpm[i] = (60 * 1000000 / ENCODER_COUNTS_PER_REV) / encoderIntervalMicros[i];
+      // Encoder stopped
+      if (UINT32_MAX == localEncoderIntervalMicros[i])
+      {
+        encoderSpeedRpm[i] = 0;
+        continue;
+      }
+
+      encoderSpeedRpm[i] = (60 * 1000000 / ENCODER_COUNTS_PER_REV) / localEncoderIntervalMicros[i];
+    }
   }
 
   // PID control
@@ -321,97 +389,47 @@ void loop() {
   {
     float dtSeconds = dtMillis / 1000;
 
-    Serial.print("PrvPower ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(motorPowerArr[i]);
-      Serial.print(" ");
-    }
-    Serial.println();
     float A0 = Kp + Ki*dtSeconds + Kd/dtSeconds;
     float A1 = -Kp - 2*Kd/dtSeconds;
     float A2 = Kd/dtSeconds;
 
-    Serial.println(A0);
-    Serial.println(A1);
-    Serial.println(A2);
-    
-    Serial.print("A0       ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(A0 * (motorSpeedSetpointsRpm[i] - encoderSpeedRpm[i]));
-      Serial.print(" ");
-    }
-    Serial.println();
-    
-    Serial.print("A1       ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(A1 * errorArr[i][0]);
-      Serial.print(" ");
-    }
-    Serial.println();
-    
-    Serial.print("A2       ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(A2 * errorArr[i][1]);
-      Serial.print(" ");
-    }
-    Serial.println();
+    printPower();
+    printSetpoints();
+    printEncoders();
 
     for (int i = 0; i < MOTOR_COUNT; i++)
     {
+
       errorArr[i][2] = errorArr[i][1];
       errorArr[i][1] = errorArr[i][0];
       errorArr[i][0] = motorSpeedSetpointsRpm[i] - encoderSpeedRpm[i];
 
-      setMotorPower(i, motorPowerArr[i]
+      int newMotorPower = motorPowerArr[i]
         + A0 * errorArr[i][0]
         + A1 * errorArr[i][1]
-        + A2 * errorArr[i][2]);
+        + A2 * errorArr[i][2];
+
+      // Set motor power to zero if it's in the opposite direction as the setpoint
+      if (motorSpeedSetpointsRpm[i] > 0 && newMotorPower < 0 || motorSpeedSetpointsRpm[i] < 0 && newMotorPower > 0)
+      {
+        newMotorPower = 0;
+      }
+
+      // Clip max power
+      if (newMotorPower > MAX_POWER)
+      {
+        newMotorPower = MAX_POWER;
+      }
+
+      setMotorPower(i, newMotorPower);
     }
+
+    printErrors();
+    printPower();
+    Serial.println();
+    Serial.println();
 
     lastPidUpdateMillis = curMillis;
-  }
-
-  static unsigned long lastPrintMs = 0;
-  if (millis() - lastPrintMs > 1000)
-  {
-    Serial.print("Encoder  ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(encoderSpeedRpm[i]);
-      Serial.print(" ");
-    }
-    Serial.println();
-
-    Serial.print("Setpoint ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(motorSpeedSetpointsRpm[i]);
-      Serial.print(" ");
-    }
-    Serial.println();
-
-    Serial.print("Error    ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(errorArr[i][0]);
-      Serial.print(" ");
-    }
-    Serial.println();
-    
-    Serial.print("Power    ");
-    for (int i = 0; i < ENCODER_COUNT; i++)
-    {
-      Serial.print(motorPowerArr[i]);
-      Serial.print(" ");
-    }
-    Serial.println();
-    Serial.println();
-
-    lastPrintMs = millis();
   }
   
 }
