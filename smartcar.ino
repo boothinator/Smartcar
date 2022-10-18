@@ -47,9 +47,9 @@ int motorPowerArr[MOTOR_COUNT] = {0, 0, 0, 0};
 // PID
 
 #define Kp 1.0
-#define Ki 0.01
+#define Ki 10.0
 #define Kd 0.0
-#define FF 0.4
+#define FF 0.2
 #define FF_NOPID 0.9
 
 #define PID_INTERVAL_MILLIS 10
@@ -335,7 +335,7 @@ void loop() {
 
     // Command continuation
     if (!(irCodeTime < 200 && (lastIRCode == CONTINUE_CODE || lastIRCode == currentIRCode))) {
-      Serial.println("Cancelling command");
+      //Serial.println("Cancelling command");
       currentIRCode = 0;
       currentIRCodeTime = 0;
       motorPower = 0;
@@ -454,14 +454,23 @@ void loop() {
   static unsigned long lastPrintMillis = 0;
   unsigned long curPrintMillis = millis();
 
-  if (curPrintMillis - lastPrintMillis > 1000)
+  if (curPrintMillis - lastPrintMillis > 100)
   {
-    printSetpoints();
+    /*printSetpoints();
     printEncoders();
     printErrors();
     printPower();
     Serial.println();
     Serial.println();
+    */
+    Serial.print(errorArr[0][0]);
+    Serial.print(" ");
+    Serial.print(motorPowerArr[0]);
+    Serial.print(" ");
+    Serial.print(motorSpeedSetpointsRpm[0]);
+    Serial.print(" ");
+    Serial.println(getMotorDirection(0) * encoderSpeedRpm[0]);
+
     lastPrintMillis = curPrintMillis;
   }
 }
