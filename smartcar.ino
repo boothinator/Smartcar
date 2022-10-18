@@ -45,12 +45,12 @@ int motorPowerArr[MOTOR_COUNT] = {0, 0, 0, 0};
 
 // PID
 
-#define Kp 0.1
-#define Ki 0.01
+#define Kp 0.5
+#define Ki 0.1
 #define Kd 0.0
-#define FF 0.8
+#define FF 0.4
 
-#define PID_INTERVAL_MILLIS 1000
+#define PID_INTERVAL_MILLIS 10
 #define MAX_POWER 255
 
 int motorSpeedSetpointsRpm[MOTOR_COUNT] = {0, 0, 0, 0};
@@ -353,11 +353,13 @@ void loop() {
     unsigned long localEncoderIntervalMicros[ENCODER_COUNT];
     unsigned long localEncoderLastChangeTimeMicros[ENCODER_COUNT];
 
+    noInterrupts();
     for (int i = 0; i < ENCODER_COUNT; i++)
     {
       localEncoderIntervalMicros[i] = encoderIntervalMicros[i];
       localEncoderLastChangeTimeMicros[i] = encoderLastChangeTimeMicros[i];
     }
+    interrupts();
 
     // Process encoders
     for (int i = 0; i < ENCODER_COUNT; i++)
@@ -387,22 +389,22 @@ void loop() {
   // Try to keep a consistent interval
   if (dtMillis >= PID_INTERVAL_MILLIS)
   {
-    float dtSeconds = dtMillis / 1000;
+    float dtSeconds = dtMillis / 1000.0;
 
     float A0 = Kp + Ki*dtSeconds + Kd/dtSeconds;
     float A1 = -Kp - 2*Kd/dtSeconds;
     float A2 = Kd/dtSeconds;
 
-    printPower();
+    /*printPower();
     printSetpoints();
-    printEncoders();
+    printEncoders();*/
 
     for (int i = 0; i < MOTOR_COUNT; i++)
     {
 
       errorArr[i][2] = errorArr[i][1];
       errorArr[i][1] = errorArr[i][0];
-      errorArr[i][0] = motorSpeedSetpointsRpm[i] - encoderSpeedRpm[i];
+      errorArr[i][0] = motorSpeedSetpointsRpm[i] - getMotorDirection(i) * encoderSpeedRpm[i];
 
       int newMotorPower = motorPowerArr[i]
         + A0 * errorArr[i][0]
@@ -424,12 +426,25 @@ void loop() {
       setMotorPower(i, newMotorPower);
     }
 
-    printErrors();
+    /*printErrors();
     printPower();
     Serial.println();
-    Serial.println();
+    Serial.println();*/
 
     lastPidUpdateMillis = curMillis;
   }
   
+  static unsigned long lastPrintMillis = 0;
+  unsigned long curPrintMillis = millis();
+
+  if (curPrintMillis - lastPrintMillis > 1000)
+  {
+    printSetpoints();
+    printEncoders();
+    printErrors();
+    printPower();
+    Serial.println();
+    Serial.println();
+    lastPrintMillis = curPrintMillis;
+  }
 }
