@@ -1,5 +1,8 @@
 #include <IRremote.h>
 #include <avr/interrupt.h>
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
+#include "Wire.h"
 
 #define ENABLE_LEFT_FRONT 6
 #define ENABLE_RIGHT_FRONT 5
@@ -80,6 +83,7 @@ uint8_t lastPinK = 0;
 
 volatile bool encodersUpdated = false;
 
+// Interrupt for encoders
 // Port K pin change interrupt
 // Analog pins 8-16
 ISR(PCINT2_vect)
@@ -99,8 +103,24 @@ ISR(PCINT2_vect)
   }
 
   lastPinK = pinK;
-
   encodersUpdated = true;
+}
+
+// IMU
+MPU6050 mpu;
+#define INTERRUPT_PIN 19  // use pin 2 on Arduino Uno & most boards
+
+bool dmpReady = false;  // set true if DMP init was successful
+uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint8_t fifoBuffer[64]; // FIFO storage buffer
+
+// IMU Interrupt
+// TODO: is this needed?
+volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+void dmpDataReady() {
+    mpuInterrupt = true;
 }
 
 void setup() {
@@ -123,6 +143,47 @@ void setup() {
   // Pin change interrupt
   PCICR |= 1 << PCIE2;
   PCMSK2 = 0b00001111;
+
+  Serial.println(F("Initializing I2C devices..."));
+  mpu.initialize();
+  pinMode(INTERRUPT_PIN, INPUT);
+
+  Serial.println(F("Initializing DMP..."));
+
+  uint8_t devStatus = mpu.dmpInitialize();
+
+  // make sure it worked (returns 0 if so)
+  if (devStatus == 0) {
+      // Calibration Time: generate offsets and calibrate our MPU6050
+      mpu.CalibrateAccel(6);
+      mpu.CalibrateGyro(6);
+      mpu.PrintActiveOffsets();
+      // turn on the DMP, now that it's ready
+      Serial.println(F("Enabling DMP..."));
+      mpu.setDMPEnabled(true);
+
+      // enable Arduino interrupt detection
+      Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
+      Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
+      Serial.println(F(")..."));
+      attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
+      mpuIntStatus = mpu.getIntStatus();
+
+      // set our DMP Ready flag so the main loop() function knows it's okay to use it
+      Serial.println(F("DMP ready! Waiting for first interrupt..."));
+      dmpReady = true;
+
+      // get expected DMP packet size for later comparison
+      packetSize = mpu.dmpGetFIFOPacketSize();
+  } else {
+      // ERROR!
+      // 1 = initial memory load failed
+      // 2 = DMP configuration updates failed
+      // (if it's going to break, usually the code will be 1)
+      Serial.print(F("DMP Initialization failed (code "));
+      Serial.print(devStatus);
+      Serial.println(F(")"));
+  }
 }
 
 void setMotorPower(int motor, int power)
@@ -463,14 +524,36 @@ void loop() {
     Serial.println();
     Serial.println();
     */
+
+    /*
+    // Display left wheel PID info
     Serial.print(errorArr[0][0]);
     Serial.print(" ");
     Serial.print(motorPowerArr[0]);
     Serial.print(" ");
     Serial.print(motorSpeedSetpointsRpm[0]);
     Serial.print(" ");
-    Serial.println(getMotorDirection(0) * encoderSpeedRpm[0]);
+    Serial.println(getMotorDirection(0) * encoderSpeedRpm[0]);*/
+
+    if (dmpReady && mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
+    {
+      Quaternion q;
+      VectorFloat gravity;
+      float ypr[3];
+      // display Euler angles in degrees
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+      Serial.print("ypr\t");
+      Serial.print(ypr[0] * 180/M_PI);
+      Serial.print("\t");
+      Serial.print(ypr[1] * 180/M_PI);
+      Serial.print("\t");
+      Serial.println(ypr[2] * 180/M_PI);
+    }
 
     lastPrintMillis = curPrintMillis;
   }
+
+  
 }
