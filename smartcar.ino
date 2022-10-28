@@ -35,6 +35,8 @@ unsigned long lastIRCode = 0;
 unsigned long lastIRCodeTime = 0;
 unsigned long currentIRCode = 0;
 unsigned long currentIRCodeTime = 0;
+
+unsigned long lastDriveCommandTime = 0;
 int motorPower = 0;
 
 // Motors
@@ -138,7 +140,7 @@ void setup() {
   pinMode(INPUT_R4, OUTPUT);
 
   IrReceiver.begin(RECV_PIN, ENABLE_LED_FEEDBACK);
-  Serial.begin(9600);  // debug output at 9600 baud
+  Serial.begin(38400);  // debug output at 9600 baud
 
   // Pin change interrupt
   PCICR |= 1 << PCIE2;
@@ -346,6 +348,56 @@ void printPower()
 }
 
 void loop() {
+
+  if (Serial.available())
+  {
+    while (Serial.available())
+    {
+      char command = Serial.read();
+
+      if ('D' == command)
+      {
+        uint8_t buf[3];
+        if (Serial.readBytes(buf, 3) < 3)
+        {
+          // Didn't get full command
+          continue;          
+        }
+
+        lastDriveCommandTime = millis();
+
+        int x = (((int)buf[0]) - 127) * 2;
+        int y = (((int)buf[1]) - 127) * 2;
+        int z = (((int)buf[2]) - 127) * 2;
+
+        int fl = x + y + z;
+        int fr = x - y + z;
+        int bl = x + y - z;
+        int br = x - y - z;
+
+        setMotorSpeed(0, max(min(fl, 255), -255));
+        setMotorSpeed(1, max(min(fr, 255), -255));
+        setMotorSpeed(2, max(min(bl, 255), -255));
+        setMotorSpeed(3, max(min(br, 255), -255));
+  /*Serial.print(x);
+  Serial.print(' ');
+  Serial.print(y);
+  Serial.print(' ');
+  Serial.print(z);
+  Serial.println();*/
+      }
+    }
+  }
+
+  if (lastDriveCommandTime != 0 && millis() - lastDriveCommandTime > 1000 && currentIRCode == 0)
+  {
+    for (int i = 0; i < MOTOR_COUNT; i++)
+    {
+      setMotorSpeed(i, 0);
+    }
+
+    lastDriveCommandTime = 0;
+  }
   
   if (IrReceiver.decode()) {
     lastIRCode = IrReceiver.decodedIRData.decodedRawData;
@@ -525,9 +577,9 @@ void loop() {
     Serial.println();
     */
 
-    /*
+    
     // Display left wheel PID info
-    Serial.print(errorArr[0][0]);
+    /*Serial.print(errorArr[0][0]);
     Serial.print(" ");
     Serial.print(motorPowerArr[0]);
     Serial.print(" ");
@@ -535,7 +587,7 @@ void loop() {
     Serial.print(" ");
     Serial.println(getMotorDirection(0) * encoderSpeedRpm[0]);*/
 
-    if (dmpReady && mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
+    /*if (dmpReady && mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
     {
       Quaternion q;
       VectorFloat gravity;
@@ -550,7 +602,7 @@ void loop() {
       Serial.print(ypr[1] * 180/M_PI);
       Serial.print("\t");
       Serial.println(ypr[2] * 180/M_PI);
-    }
+    }*/
 
     lastPrintMillis = curPrintMillis;
   }
